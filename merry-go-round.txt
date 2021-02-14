@@ -1,0 +1,1990 @@
+# Procedural Modeling Project
+# Created by John Damon
+# February 22, 2019
+# CSANM 258 - Instructor: Seth Holladay
+
+##########################################################################################################
+#                                                                                                        #
+#                                         Table of Contents                                              #
+#                                                                                                        #
+##########################################################################################################
+#
+#       Base Creation Code: line [   22 -  650 ]
+#  Object Layout Functions: line [  651 - 1120 ]
+#        Utility Functions: line [ 1121 - 1327 ]
+# User Interface Functions: line [ 1328 - 1934 ]
+#      Animation Functions: line [ 1935 - 1980 ]
+#       Program Execuation: line [ 1981 - END  ]
+
+import maya.cmds as mc
+import math
+        
+###########################################################################################################
+                                       #                               #
+                                       #    Base Creation Functions    #
+                                       #                               #
+                                       #################################
+
+def createBasePlates(radius, level, version):
+    baseList = []
+    base = mc.polyCylinder(r=radius, h=1.5, sx=72, sy=1, sz=1, ax=(0,1,0), cuv=3, ch=1, n='foundation')
+    mc.move(0, -11.523022, 0, base[0], r=True)
+    mc.polyBevel(base[0] + '.e[0:143]', o=.25, oaf=1, af=1,sg=2, sa=30, mvt=.0001, ma=180, at=180)
+    baseList.append(base[0])
+    
+    base = mc.polyCylinder(r=radius - 1, h=1, sx=72, sy=1, sz=1, ax=(0,1,0), cuv=3, ch=1, n='base1')
+    mc.move(0, -10.561505, 0, base[0], r=True)
+    mc.polyBevel(base[0] + '.e[0:143]', o=.25, oaf=1, af=1,sg=2, sa=30, mvt=.0001, ma=180, at=180)
+    baseList.append(base[0])
+    
+    base = mc.polyCylinder( r=radius - 2, h=0.5, sx=72, sy=1, sz=1, ax=(0,1,0), cuv=3, ch=1, n='base2')
+    mc.move(0, -9.943372, 0, base[0], r=True)
+    mc.polyBevel(base[0] + '.e[0:143]', o=.25, oaf=1, af=1,sg=2, sa=30, mvt=.0001, ma=180, at=180)
+    baseList.append(base[0])
+    
+    base = mc.polyPipe(r=radius - 2.25, h=0.25, t=.25, sa=72, sh=1, sc=0, ax=(0,1,0), cuv=1, ch=1, n='spinner_ring')
+    mc.move(0, -9.647892, 0, base[0], r=True)
+    baseList.append(base[0])
+    
+    ring = mc.polyTorus( r=radius - 2.35, sr=0.1, tw=0, sx=72, sy=1, ax=(0, 1, 0), cuv=1, ch=1, n='innerGateRing1' )
+    mc.move(0, -6.5, 0, ring[0], r=True)
+    baseList.append(ring[0])
+    
+    bar = mc.polyCylinder( r=0.05, h=3.5, sx=36, sy=1, sz=1, ax=(0, 1, 0), rcp=0, cuv=3, ch=1, n='innerBar1' )
+    mc.move(0, -8.177822, 12.661325 + (radius - 15), bar[0], r=True)
+    mc.move(0, 0, 0, bar[0] + '.scalePivot', bar[0] + '.rotatePivot')
+    baseList.append(bar[0])
+    
+    mc.select(bar[0])
+    for x in range(0, 119):
+        bar = mc.duplicate( rr=True )
+        mc.rotate( 0, 3, 0, bar[0], r=True )
+        baseList.append(bar[0])
+    
+    combinedObj = uniteComponents(baseList, getBaseName(level, version))
+    
+    spinner = mc.polyCylinder(r=radius - 2.55, h=0.25, sx=72, sy=1, sz=1, ax=(0,1,0), cuv=3, ch=1, n='level_' + str(level) + '_spinner_plate_ver_' + str(version) )
+    mc.move(0, -9.601494, 0, spinner[0], r=True)
+    
+    return (combinedObj[0], spinner[0])
+                                       
+def createElevatorColumn(level, version):
+    allObjs = []
+    cyl = mc.polyCylinder(r=4, h=14.5, sx=36, sy=7, sz=2, ax=(0,1,0), rcp=False, cuv=3, ch=True,
+                          n='centerColumn_lvl_' + str(level) + '_version_' + str(version) + '_1')
+    mc.move(0, -3.485232, 0, r=True)
+    mc.delete(cyl[0] + '.f[59:64]', cyl[0] + '.f[95:100]', cyl[0] + '.f[131:136]', cyl[0] + '.f[167:172]')
+    allObjs.append(cyl[0])
+    
+    cube = mc.polyCube(w=1, h=14.5, d=0.25, sx=2, sy=8, sz=1, ax=(0,1,0), cuv=4, ch=True,
+                       n='lightBase_lvl_' + str(level) + '_ver_' + str(version) + '_1')
+    mc.move(0, -3.485232, 4.151168, r=True)
+    allObjs.append(cube[0])
+    
+    mc.select(d=True, all=True)
+    mc.symmetricModelling(s=True, ax='x')
+    for index in range(0, 52, 3):
+        mc.select(cube[0] + '.vtx[' + str(index) + ']', add=True, sym=True)
+        
+    mc.move(0, 0, -0.0459379, r=True)
+    mc.symmetricModelling(s=False)
+    mc.move(0, 0, 0, cube[0] + '.scalePivot', cube[0] + '.rotatePivot')
+    
+    lightObjs = []  
+    bulb = mc.polySphere( r=0.25, sx=20, sy=20, ax=(0,1,0), cuv=2, ch=1, n='bulb_lvl_' + str(level) + '_ver_' + str(version) + '_1' )
+    mc.move(0, 1.973117, 4.382746, bulb[0], r=True)
+    lightObjs.append(bulb[0])
+    
+    for x in range(1, 7):
+        bulb = mc.duplicate(bulb[0])
+        mc.move(0, -1.815, 0, r=True)
+        lightObjs.append(bulb[0])
+        
+    lightObj = uniteComponents(lightObjs, getLightsName(1, 1, 1))
+    mc.rotate(0, 40, 0, lightObj[0], r=True)
+    mc.rotate(0, 40, 0, cube[0], r=True)
+    allObjs.append(lightObj[0])
+    for x in range(0, 7):
+        lightObj = mc.duplicate(lightObj[0], rr=True)
+        allObjs.append(lightObj[0])
+        cube = mc.duplicate(cube[0])
+        allObjs.append(cube[0])
+        mc.rotate(0, 40, 0, lightObj[0], r=True)
+        mc.rotate(0, 40, 0, cube[0], r=True)
+        
+    return groupComponents(allObjs, getColumnName(level, version))
+
+def createNormalColumn(level, version):
+    objList = []
+    cyl = mc.polyCylinder( r=5, h=14, sx=36, sy=10, sz=1, ax=(0,1,0), cuv=3, ch=1, 
+                           n='centerColumn_lvl_' + str(level) + '_version_' + str(version) + '_1' )
+    mc.setAttr( cyl[0] + '.translateY', -3.66737 )
+    
+    mc.polyMoveEdge( cyl[0] + '.e[288:323]', s=(0.923797, 0.923797, 0.923797) )
+    mc.polyMoveEdge( cyl[0] + '.e[252:287]', s=(0.863924, 0.863924, 0.863924) )
+    mc.polyMoveEdge( cyl[0] + '.e[216:251]', s=(0.820379, 0.820379, 0.820379) )
+    mc.polyMoveEdge( cyl[0] + '.e[180:215]', s=(0.798607, 0.798607, 0.798607) )
+    mc.polyMoveEdge( cyl[0] + '.e[144:179]', s=(0.782278, 0.782278, 0.782278) )
+    mc.polyMoveEdge( cyl[0] + '.e[108:143]', s=(0.771392, 0.771392, 0.771392) )
+    mc.polyMoveEdge( cyl[0] + '.e[72:107]', s=(0.760506, 0.760506, 0.760506) )
+    mc.polyMoveEdge( cyl[0] + '.e[36:71]', s=(0.776835, 0.776835, 0.776835) )
+    mc.polyMoveEdge( cyl[0] + '.e[0:35]', s=(0.787721, 0.787721, 0.787721) )
+    
+    objList.append(cyl[0])
+    
+    cube = mc.polyCube( h=14, d=1, sx=1, sy=10, sz=1, ax=(0,1,0), cuv=4, ch=1,
+                        n='lightBase_lvl_' + str(level) + '_ver_' + str(version) + '_1' )
+    mc.move( 0, -3.664, 4.840, cube[0], r=True )
+    
+    translationValues = [ -0.973925, -1.06668, -1.113057, -1.159435, -1.06668, -0.973925, -0.88117, -0.695661, -0.417397 ]
+    vertLeftBounds1 = 0
+    vertLeftBounds2 = 42
+    vertRightBounds1 = 1
+    vertRightBounds2 = 43
+    for tVal in range(0, 9):
+        mc.polyMoveVertex( cube[0] + '.vtx[' + str(vertLeftBounds1) + ':' + str(vertRightBounds1) + ']',
+            cube[0] + '.vtx[' + str(vertLeftBounds2) + ':' + str(vertRightBounds2) + ']', tz = translationValues[tVal] )
+        vertLeftBounds1 = vertLeftBounds1 + 2
+        vertRightBounds1 = vertRightBounds1 + 2
+        vertLeftBounds2 = vertLeftBounds2 - 2
+        vertRightBounds2 = vertRightBounds2 - 2
+    
+    objList.append(cube[0])
+    
+    mc.move(0, 0, 0, cube[0] + '.scalePivot', cube[0] + '.rotatePivot')
+    for x in range(0, 7):
+        cube = mc.duplicate(cube[0])
+        mc.rotate(0, 45, 0, cube[0], r=True)
+        objList.append(cube[0])
+    
+    lightObjs = []      
+    bulbTranslationValues = [ [0, 1.901473, 5.4725318], [0, 0.510151, 5.101513],
+            [0, -0.88117, 4.823249], [0, -2.226115, 4.637739], [0, -3.663814, 4.498607],
+            [0, -5.101513, 4.452229], [0, -6.492835, 4.359475], [0, -7.884156, 4.405852] ]
+    
+    for tuple in bulbTranslationValues:
+        bulb = mc.polySphere( r=0.25, sx=20, sy=20, ax=(0,1,0), cuv=2, ch=1, n='bulb_lvl_' + str(level) + '_ver_' + str(version) + '_1' )
+        mc.setAttr( bulb[0] + '.translateX', tuple[0] )
+        mc.setAttr( bulb[0] + '.translateY', tuple[1] )
+        mc.setAttr( bulb[0] + '.translateZ', tuple[2] )
+        lightObjs.append(bulb[0])
+        
+    light = uniteComponents(lightObjs, getLightsName(1, 1, 1))
+    objList.append(light[0])
+    
+    for x in range(0, 7):
+        light = mc.duplicate(light[0])
+        objList.append(light[0])
+        mc.rotate(0, 45, 0, light[0], r=True)
+    
+    return groupComponents(objList, getColumnName(level, version))
+
+def createCircularPlates(version):
+    objList = []
+    
+    plate = mc.polyCylinder(r=2, h=4, sx=36, sy=1, sz=2, ax=(0, 1, 0), cuv=3, ch=1, n="circlePlate_ver_" + str(version) + "_1")
+    mc.rotate(90, 0, 0, plate[0], r=True)
+    mc.setAttr(plate[0] + ".translateY", 3.887841)
+    mc.setAttr(plate[0] + ".translateZ", 14.077787)
+    mc.scale(0.577778, 0.0777777, 1, plate[0], r=True)
+    vertPoint = mc.pointPosition(plate[0] + ".vtx[145]", local=False, world=True)
+    
+    mc.polyMoveEdge(plate[0] + ".e[108:143]", s=( 1.7, 1.7, 1.7 ), pvt=vertPoint)
+    mc.polyExtrudeFacet(plate[0] + ".f[72:107]", kft=True, ltz=0.15)
+    mc.move(0, 0, 0, plate[0] + ".scalePivot", plate[0] + ".rotatePivot", a=True)
+    
+    objList.append(plate[0])
+    for x in range(1, 8):
+        plate = mc.duplicate(plate[0])
+        mc.rotate(0, 45, 0, plate[0], r=True)
+        objList.append(plate[0])
+        
+    return objList    
+
+def createArches(version):
+    objList = []
+    
+    arch = mc.polyPipe(r=14, h=5, t=1, sa=216, sh=1, n='arch_ver_' + str(1) + '_1')
+    mc.move(0, 3.140717, 0, r=True)
+    mc.select(arch[0] + '.f[161]', arch[0] + '.f[377]', arch[0] + '.f[593]', arch[0] + '.f[809]',
+              arch[0] + '.f[189]', arch[0] + '.f[405]', arch[0] + '.f[621]', arch[0] + '.f[837]')
+    mc.delete()
+    mc.select(arch[0] + '.f[0:160]', arch[0] + '.f[188:374]', arch[0] + '.f[402:588]', 
+              arch[0] + '.f[616:802]', arch[0] + '.f[830:855]')
+    mc.delete()
+    
+    translationVals = [0.0326643, 0.144743, 0.397459, 1.019799, 1.558428, 1.914532, 2.168585, 2.34548, 2.446632, 2.5]
+    leftEdge = 140
+    symmetricOffset = 19
+    for index in range(0, 10):
+        mc.select(arch[0] + '.e[' + str(leftEdge) + ']', arch[0] + '.e[' + str(leftEdge + symmetricOffset) + ']')
+        mc.move(0, translationVals[index], 0, r=True)
+        mc.select(d=True, all=True)
+        symmetricOffset -= 2
+        leftEdge += 1 
+    
+    objList.append(arch[0])
+    for count in range(0, 15):
+        arch = mc.duplicate(arch[0])
+        mc.rotate(0, 22.5, 0, arch[0], r=True)
+        objList.append(arch[0])
+    
+    accent = mc.polyPipe(r=14.1, h=0.25, t=1, sa=72, sh=1, n='archAccent_ver_' + str(1) + '_1')
+    mc.move(0, 1.955743, 0, r=True)
+    objList.append(accent[0])
+    
+    for x in range(0, 3):
+        accent = mc.duplicate(accent[0])
+        mc.move(0, 0.2, 0, accent[0], r=True)
+        objList.append(accent[0])
+    
+    return objList
+
+def createRoof(version):
+    objList = []
+    
+    mc.symmetricModelling(s=False)
+    tent = mc.polyCone(r=13.85, h=9, sx=72, sy=8, sz=1, ax=(0, 1, 0), rcp=0, cuv=3, ch=1, n='tent_ver_' + str(version))
+    mc.move(0, 8.617962, 0, tent[0], r=True)
+    mc.scale(0.852528, 0.852528, 0.852528, tent[0] + '.e[144:215]', r=True)
+    mc.scale(0.777782, 0.777782, 0.777782, tent[0] + '.e[216:287]', r=True)
+    mc.scale(0.768523, 0.768523, 0.768523, tent[0] + '.e[288:359]', r=True)
+    mc.scale(0.828535, 0.828535, 0.828535, tent[0] + '.e[360:431]', r=True)
+    mc.scale(0.960795, 0.960795, 0.960795, tent[0] + '.e[432:503]', r=True) 
+    mc.scale(1.308636, 1.308636, 1.308636, tent[0] + '.e[504:575]', r=True)
+    mc.move(0, -1.096071, 0, tent[0] + '.e[504:575]', r=True)
+    mc.polyExtrudeFacet(tent[0] + '.f[504:575]', pvx=0, pvy=0, pvz=0, tk=1.67, sma=30)
+    objList.append(tent[0])
+    
+    roof = mc.polySphere(r=2, sx=20, ax=(0, 1, 0), cuv=2, ch=1, n='roof_ver_' + str(version))
+    mc.move(0, 12.322222, 0, roof[0], r=True)
+    objList.append(roof[0])
+    
+    ring = mc.polyTorus(r=2.15, sr=0.25, tw=0, sx=36, ax=(0, 1, 0), cuv=1, ch=1, n='roofRing_ver_' + str(version))
+    mc.move(0, 12.075751, 0, ring[0], r=True)
+    objList.append(ring[0])
+
+    pole = mc.polyCylinder(r=0.1, h=6, sx=36, sy=1, sz=1, ax=(0, 1, 0), rcp=0, cuv=3, ch=1, n='flagPole_ver_' + str(version))
+    mc.move(0, 17.003662, 0, pole[0], r=True)
+    objList.append(pole[0])
+    
+    poleEnd = mc.polySphere(r=0.2, sx=20, sy=20, ax=(0, 1, 0), cuv=2, ch=1, n='flagPoleEnd_ver_' + str(version))
+    mc.move(0, 20.095237, 0, poleEnd[0], r=True)
+    objList.append(poleEnd[0])
+
+    return objList
+
+def createFlag(version):
+    objList = []
+    
+    flag = mc.polyPlane(w=4, h=2, sx=20, sy=20, n='flag_ver_' + str(version))
+    mc.move(2.005, 18.847, 0, flag[0], r=True)
+    mc.rotate(90, 0, 0, flag[0], r=True)
+    mc.select(deselect=True, all=True)
+    
+    step = 19
+    start = 39
+    for x in range(1, 20):
+        for y in range(0, x):
+            objName = flag[0] + '.f[' + str(start) + ']'
+            mc.select(objName, add=True)
+            if y != (x - 1):
+                start += 1
+    
+        start = start + step
+        step -= 1
+        
+    mc.delete()
+    
+    mc.select(deselect=True, all=True)
+    step = 20
+    start = 41
+    for x in range(0, 20):
+        objName = flag[0] + '.vtx[' + str(start) + ']'
+        mc.select(objName)
+        mc.move(-0.111558, -0.04466491, 0, objName, r=True)
+        start = start + step
+        step -= 1
+    
+    mc.select(deselect=True, clear=True, all=True)
+    mc.softSelect(sse=True, ssd=0.40)
+    
+    tempStart = 2
+    potentialVerts = 19
+    for y in range(0,5):
+        start = tempStart
+        step = 21
+        for x in range(0, potentialVerts):
+            objName = flag[0] + '.vtx[' + str(start) + ']'
+            if x == 0 or x == 1:
+                mc.select(objName, add=True)
+                start = start + step
+            else:
+                step -= 1
+                mc.select(objName, add=True)
+                start = start + step
+    
+        tempStart += 4
+        potentialVerts -= 4 
+    
+    mc.move(0, 0, 0.2, r=True)
+    objList.append(flag[0])
+    
+    return objList
+
+def createUnicornHead():
+    objList = []
+    
+    mc.polySphere( r=1.25, sx=20, sy=20 )
+    mc.move(9.508002, 1.944819, 0, 'pSphere1', r=True)
+    objList.append('pSphere1')
+    mc.polySphere( r=2.25, sx=20, sy=20 )
+    mc.move(8.455816, 5.879435, 0, 'pSphere2', r=True)
+    objList.append('pSphere2')
+    mc.polyCylinder( r=2.25, h=4, sx=36, sy=4, sz=1, rcp=0 )
+    mc.move(8.514021, 4.016048, 0, 'pCylinder1', r=True)
+    
+    pointPos = mc.pointPosition( 'pCylinder1.vtx[181]', w=True )
+    mc.move( pointPos[0], pointPos[1], pointPos[2], 'pCylinder1.scalePivot', 'pCylinder1.rotatePivot', absolute=True )
+    
+    mc.setAttr( 'pCylinder1.rotateZ', 14.965457 )
+    pointPos = mc.pointPosition( 'pCylinder1.vtx[180]', w=True )
+    mc.polyMoveEdge( 'pCylinder1.e[0:35]', 'pCylinder1.e[324:359]', s=(0.541414, 0.541414, 0.541414), pvt=pointPos )
+    mc.polyMoveEdge( 'pCylinder1.e[36:71]', s=(0.65, 0.65, 0.65) )
+    mc.polyMoveEdge( 'pCylinder1.e[72:107]', s=(0.860634, 0.860634, 0.860634) )
+    pointPos = mc.pointPosition( 'pCylinder1.vtx[181]', w=True )
+    mc.polyMoveEdge( 'pCylinder1.e[144:179]', 'pCylinder1.e[324:359]', t=(-0.0984861, 0, 0), pvt=pointPos )
+    objList.append('pCylinder1')
+    
+    mc.duplicate( 'pSphere2', rr=True )
+    mc.move(7.955, 5.879, 0, 'pSphere3')
+    objList.append('pSphere3')
+    mc.duplicate( 'pSphere3', rr=True )
+    mc.move(7.349, 5.247, 0, 'pSphere4')
+    objList.append('pSphere4')
+    mc.duplicate( 'pSphere4', rr=True )
+    mc.move(6.848, 4.588, 0, 'pSphere5')
+    objList.append('pSphere5')
+    
+    mc.polyCylinder( r=2.25, h=4, sx=24, sy=4, sz=1 )
+    mc.setAttr( 'pCylinder2.translateX', 5.631 )
+    mc.setAttr( 'pCylinder2.rotateZ', -13.710 )
+    mc.setAttr( 'pCylinder2.scaleY', 2.345 )
+    mc.scale( 0.632137, 0.632137, 0.632137, 'pCylinder2.e[0:23]', r=True )
+    mc.scale( 1.313766, 1.313766, 1.313766, 'pCylinder2.e[24:47]', r=True )
+    mc.scale( 1.130956, 1.130956, 1.130956, 'pCylinder2.e[48:71]', r=True )
+    objList.append('pCylinder2')
+    
+    mc.polySphere( r=3, sx=20, sy=20 )
+    mc.move(5.130, -2.272, 0, 'pSphere6')
+    objList.append('pSphere6')
+    
+    mc.polyCone( r=0.5, h=4, sx=36, sy=8, sz=0, ax=(0, 1, 0), rcp=0, cuv=3, ch=1 )
+    mc.move( 11.790, 7.482, 0, 'pCone1', r=True )
+    mc.rotate( 0, 0, -45, 'pCone1', r=True )
+    mc.scale( 1, 1, 1, 'pCone1', r=True )
+    objList.append('pCone1')
+    
+    head = uniteComponents(objList, 'head')
+    return head
+    
+def createRightFrontLeg():
+    objList = []
+    
+    mc.polySphere( r=3, sx=20, sy=20 )
+    mc.move( 5.609597, -4.227523, 1.999199, 'pSphere1', r=True )
+    mc.scale( 0.578, 0.578, 0.578, 'pSphere1', r=True )
+    objList.append('pSphere1')
+    
+    mc.duplicate( rr=True )
+    mc.move( 0, -1.3804, 0, 'pSphere2', r=True )
+    mc.scale( 0.857252, 0.857252, 0.857252, 'pSphere2', r=True )
+    objList.append('pSphere2')
+    
+    mc.duplicate( rr=True )
+    mc.rotate( 0, 0, -47.273241, 'pSphere3', r=True, ws=True, fo=True )
+    mc.move( 1.585321, 1.300776, 0, 'pSphere3', r=True )
+    mc.scale( 1, 2.322514, 1, 'pSphere3', r=True )
+    objList.append('pSphere3')
+    
+    mc.polySphere( r=3, sx=20, sy=20 )
+    mc.move( 9.633874, -2.398306, 1.999199, 'pSphere4', r=True )
+    mc.scale( 0.312954, 0.312954, 0.312954, 'pSphere4', r=True )
+    objList.append('pSphere4')
+    
+    mc.polyCylinder( r=0.5, h=4, sx=24, sy=5, sz=1 )
+    mc.move( 9.227381, -4.755963, 2.094399, 'pCylinder1', r=True )
+    mc.rotate( 0, 0, -16.645029, 'pCylinder1', r=True, ws=True, fo=True )
+    pointPos = mc.pointPosition( 'pCylinder1.vtx[144]', w=True )
+    mc.polyMoveEdge( 'pCylinder1.e[0:23]', 'pCylinder1.e[264:287]', s=(1.336693, 1.336693, 1.336693), pvt=pointPos )
+    mc.polyMoveEdge( 'pCylinder1.e[24:47]', s=(0.896402, 0.896402, 0.896402) )
+    mc.polyMoveEdge( 'pCylinder1.e[48:71]', s=(0.715106, 0.715106, 0.715106) )
+    mc.polyMoveEdge( 'pCylinder1.e[72:95]', s=(0.715106, 0.715106, 0.715106) )
+    objList.append('pCylinder1')
+    
+    mc.polySphere( r=0.5, sx=20, sy=20 )
+    mc.move( 8.751947, -6.864809, 2.094399, 'pSphere5', r=True )
+    objList.append('pSphere5')
+    
+    mc.polyCylinder(r=1, h=1, sx=24, sy=3)
+    mc.move( 7.644881, -8.175775, 2.079969, 'pCylinder2', r=True )
+    mc.rotate( 0, 90, 90, r=True, ws=True, fo=True )
+    
+    mc.symmetricModelling( s=True )
+    
+    mc.select( 'pCylinder2.vtx[73:81]', r=True, sym=True )
+    mc.move( 0, -0.475363, 0, r=True )
+    mc.select( 'pCylinder2.vtx[49:57]', r=True, sym=True )
+    mc.move( 0, -0.2905, 0, r=True )
+    mc.select( 'pCylinder2.vtx[25:33]', r=True, sym=True )
+    mc.move( 0, -0.132045, 0, r=True )
+    objList.append('pCylinder2')
+    
+    mc.polyCylinder( r=0.5, h=2, sx=24, sy=3, sz=1 )
+    mc.rotate( 0, 0, -27.183074, 'pCylinder3', r=True, ws=True, fo=True )
+    mc.move( 8.18374, -7.605384, 2.098148, 'pCylinder3', r=True )
+    objList.append('pCylinder3')
+    
+    mc.symmetricModelling( s=False )
+    return objList
+    
+def createBody():
+    objList = []
+    
+    mc.polyCylinder( r=3, h=8, sx=24, sy=5, sz=1 )
+    mc.rotate( 0, 0, 90, 'pCylinder4', r=True, ws=True, fo=True )
+    mc.move( 0, -1.88215, 0, 'pCylinder4', r=True )
+    
+    pointPos = mc.pointPosition( 'pCylinder4.vtx[144]', w=True )
+    
+    mc.polyMoveEdge( 'pCylinder4.e[0:23]', 'pCylinder4.e[264:287]', s=(0.842734, 0.842734, 0.842734), pvt=pointPos )
+    mc.polyMoveEdge( 'pCylinder4.e[24:47]', t=(0, -0.58257, 0) )
+    mc.polyMoveEdge( 'pCylinder4.e[48:71]', t=(0, -1.030701, 0) )
+    mc.polyMoveEdge( 'pCylinder4.e[72:95]', t=(0, -0.985888, 0) )
+    mc.polyMoveEdge( 'pCylinder4.e[96:119]', t=(0, -0.941075, 0) )
+    mc.polyMoveEdge( 'pCylinder4.e[120:143]', 'pCylinder4.e[288:311]', t=(0, -1.344393, 0) )
+    objList.append('pCylinder4')
+    
+    mc.polySphere( r=3, sx=20, sy=20 )
+    mc.move( -4.191344, -3.263751, 0, 'pSphere6', r=True )
+    objList.append('pSphere6')
+    
+    body = uniteComponents(objList, 'body')
+
+    return body
+
+def createRightBackLeg():
+    objList = []
+    
+    mc.polySphere( r=3, sx=20, sy=20 )
+    mc.move( -4.871, -5.381, 1.865, 'pSphere6', r=True )
+    mc.rotate( -11.304, -27.652, 23.302, 'pSphere6', r=True )
+    mc.scale( 0.634, 1.341, 0.407, 'pSphere6', r=True )
+    objList.append('pSphere6')
+    
+    mc.polySphere( r=0.5, sx=20, sy=20 )
+    mc.move( -4.098, -8.901, 2.261, 'pSphere7', r=True )
+    mc.scale( 2.018, 2.018, 2.018, 'pSphere7', r=True )
+    objList.append('pSphere7')
+    
+    mc.polySphere( r=0.5, sx=20, sy=20 )
+    mc.move( -5.715, -9.315, 2.268, 'pSphere8', r=True )
+    mc.rotate( 0, 0, -55.442, 'pSphere8', r=True )
+    mc.scale( 1.933, 4.464, 1.933, 'pSphere8', r=True )
+    objList.append('pSphere8')
+    
+    mc.polySphere( r=0.5, sx=20, sy=20 )
+    mc.move( -7.197, -10.495, 2.301, 'pSphere9', r=True )
+    mc.scale( 1.421, 1.421, 1.421, 'pSphere9', r=True )
+    objList.append('pSphere9')
+    
+    mc.duplicate( 'pCylinder1', rr=True )
+    mc.move(-5.272, -11.830, 2.301, 'pCylinder4')
+    mc.rotate(0, 0, 50.263, 'pCylinder4')
+    mc.scale(1.162, 1.162, 1.162, 'pCylinder4')
+    objList.append('pCylinder4')
+    
+    mc.duplicate( 'pSphere9', rr=True )
+    mc.move(-3.368, -13.435, 2.253, 'pSphere10')
+    mc.rotate(0, 0, 0, 'pSphere10')
+    mc.scale(1.463, 1.463, 1.463, 'pSphere10')
+    objList.append('pSphere10')
+    
+    mc.duplicate( 'pCylinder2', rr=True )
+    mc.move(-2.680, -14.950, 2.186, 'pCylinder5')
+    mc.rotate(-180.000, 90, 0, 'pCylinder5')
+    mc.scale(1, 1, 1, 'pCylinder5')
+    objList.append('pCylinder5')
+    
+    mc.duplicate( 'pCylinder5', rr=True )
+    mc.move(-3.183, -13.883, 2.186, 'pCylinder6')
+    mc.rotate(-199.293, 90, 0, 'pCylinder6')
+    mc.scale(0.506, 1.751, 0.506, 'pCylinder6')
+    objList.append('pCylinder6')
+    
+    return objList
+
+def createLeftLegs():
+    objList = []
+    
+    mc.duplicate( 'rightFrontLeg', rr=True )
+    mc.rename( 'rightFrontLeg1', 'leftFrontLeg')
+    mc.scale( 1, 1, -1, 'leftFrontLeg', r=True )
+    objList.append('leftFrontLeg')    
+    
+    mc.duplicate( 'rightBackLeg', rr=True )
+    mc.rename( 'rightBackLeg1', 'leftBackLeg')
+    mc.scale( 1, 1, -1, 'leftBackLeg', r=True )
+    objList.append('leftBackLeg')
+    
+    return objList
+         
+def createPole():
+    pole = mc.polyCylinder( r=0.1, h=19, sx=24, sy=1, sz=1, ax=(0, 1, 0), rcp=0, cuv=3, ch=1, n='pole1' )
+    mc.move( -1.436, -3.787, 10.777, r=True )
+    mc.scale( 1, 0.822, 1, r=True )
+    
+    return pole
+
+def createGate(version):
+    radius1 = getLevel_1_radius()    
+    ring = mc.polyTorus( r=radius1 + 5, sr=0.1, tw=0, sx=72, sy=1, ax=(0, 1, 0), cuv=1, ch=1, n='gateRing1' )
+    mc.move( 0, -7.484, 0, ring[0], r=True )
+    
+    bar = mc.polyCylinder( r=0.1, h=5, sx=36, sy=1, sz=1, ax=(0, 1, 0), rcp=0, cuv=3, ch=1, n='bar1' )
+    mc.move( 0, -9.965, 19.99 + (radius1 - 15), bar[0], r=True )
+    mc.move( 0, 0, 0, bar[0] + '.rotatePivot', bar[0] + '.scalePivot', absolute=True )
+    
+    mc.select(bar[0])
+    for x in range(0, 119):
+        bar = mc.duplicate( rr=True )
+        mc.rotate( 0, 3, 0, bar[0], r=True )
+    
+    selected = mc.ls( 'bar*', 'gateRing1', tr=True )   
+    uniteComponents(selected, 'gate_ver_' + str(version))   
+
+def createGroundPlane():
+    mc.polyPlane( w=500, h=500, sx=100, sy=100, ax=(0, 1, 0), cuv=2, ch=1, n='ground' )
+    mc.move( 0, -12.297, 0, 'ground', r=True )
+
+def createStreetLight(version):
+    objList = []
+    base = mc.polyCylinder(r=1, h=0.25, sx=72, sy=1, sz=2)
+    objList.append(base[0])
+    mc.move(-56.424106, -12.125376, 0, base[0], r=True)
+    
+    base2 = mc.polyCone(r=0.9, h=0.5, sx=36, sy=8, sz=3)
+    objList.append(base2[0])
+    mc.move(-56.424106, -11.757543, 0, base2[0], r=True)
+    
+    scaleVals = [0.925209, 0.905855, 0.914581, 0.951779, 1.045924]
+    leftBounds = 108
+    rightBounds = leftBounds + 35
+    for index in range(0, 5):
+        mc.select(base2[0] + '.e[' + str(leftBounds) + ':' + str(rightBounds) + ']')
+        mc.scale(scaleVals[index], scaleVals[index], scaleVals[index], r=True)
+        leftBounds = leftBounds + 36
+        rightBounds = leftBounds + 35
+    
+    index = 0    
+    for edge in range(108, 288, 36):
+        mc.scale(scaleVals[index], scaleVals[index], scaleVals[index], 
+                 base2[0] + '.e[' + str(edge) + ':' + str(edge + 35) + ']', r=True)
+        index += 1
+                 
+    mc.select(base2[0] + '.f[252:323]', base2[0] + '.f[360:395]')
+    mc.delete()
+    mc.select(clear=True)
+    
+    mc.polyCloseBorder(base2[0] + '.e[252:287]')
+    mc.polyExtrudeFacet(base2[0] + '.f[288]', tk=3.6)
+    
+    pole = mc.polyCylinder(r=.25, h=8, sx=8, sy=1, sz=2)
+    objList.append(pole[0])
+    mc.move(-56.4093458, -4.1663942, 0, pole[0], r=True)
+    mc.select(pole[0] + '.e[40:47]')
+    mc.polySplitRing(stp=2, div=5, uem=True, sma=30, fq=True)
+    mc.select(clear=True)
+    mc.select(pole[0])
+    mc.nonLinear(typ="twist")
+    mc.setAttr("twist1.startAngle", -470)
+    mc.delete(ch=True, all=True)
+    
+    baseLight = mc.polySphere(r=0.35, sx=36, sy=36)
+    objList.append(baseLight[0])
+    mc.move(-56.41, 0, 0, baseLight[0], r=True)
+    topLight = mc.duplicate(baseLight[0])
+    objList.append(topLight[0])
+    mc.move(0, 2.377429, 0, topLight[0], r=True)
+    mc.scale(0.7, 0.7, 0.7, topLight[0], r=True)
+    accent = mc.polyPipe(r=1.3, h=0.15, t=1, sa=72, sh=1)
+    objList.append(accent[0])
+    mc.rotate(45, 0, 90, accent[0], r=True)
+    mc.move(-56.437172, 1.2488337, 0, accent[0], r=True)
+    accent2 = mc.duplicate(accent[0])
+    objList.append(accent2[0])
+    mc.rotate(0, 90, 0, accent2[0], r=True)
+    accent3 = mc.polyTorus(r=0.35, sr=0.05, tw=0, sx=72, sy=1)
+    objList.append(accent3[0])
+    mc.move(-56.4200466, 0, 0, accent3[0], r=True)
+    accent4 = mc.duplicate(accent3[0])
+    objList.append(accent4[0])
+    mc.move(0, 2.510028, 0, accent4[0], r=True)
+    mc.scale(0.601639, 0.601639, 0.601639, accent4[0], r=True)
+    accent5 = mc.polySphere(r=0.025, sx=36, sy=36)
+    objList.append(accent5[0])
+    mc.move(-56.4123523, 2.6232165, 0, accent5[0], r=True)
+    
+    united = uniteComponents(objList, "streetLightFixture_ver_" + str(version) + '_1')
+    
+    light = mc.polySphere(r=1.25, sx=36, sy=36, n='light_ver_' + str(version) + '_1')
+    mc.move(-56.411, 1.2503, 0, light[0], r=True)
+    
+    objList = []
+    objList.append(united[0])
+    objList.append(light[0])
+    
+    streetLight = groupComponents(objList, "streetLight_ver_" + str(version) + "_1")
+    mc.move(15, 0, 0, streetLight, r=True)
+    
+    return streetLight        
+###########################################################################################################
+                                       #                               #
+                                       #    Object Layout Functions    #
+                                       #                               #
+                                       #################################
+
+def createMerryGoRound():
+    print("Setting timeline options...")
+    setTimeLineOptions()
+    print("Completed.")
+    print("Deleting all non-finalized rides...")
+    deleteNonFinalizedRides()
+    print("Completed.")
+    print("Enabling radius sliders...")
+    enableRadiiSliders()
+    print("Completed.")
+    print("Enabling ride sliders...")
+    enableRidesSliders()
+    print("Completed.")
+    print("Toggling animation sliders...")
+    togglePeriodAmpSliders()
+    print("Completed.")
+    print("Retrieving number of levels...")
+    levels = getLevelsValue()
+    print("Completed.")
+    print("Getting current ride version...")
+    version = len(mc.ls('merry_go_round_ver_*')) + 1
+    print("Completed.")
+    print("Getting radius levels...")
+    radius1 = getLevel_1_radius()
+    radius2 = getLevel_2_radius()
+    radius3 = getLevel_3_radius()
+    radius4 = getLevel_4_radius()
+    radius5 = getLevel_5_radius()
+    print("Completed.")
+    animationList = []
+    
+    if(mc.checkBoxGrp("defaultBox", query=True, value1=True) == False):
+        animationList = [(getLevel_1_rotationValue(), getLevel_1_ampValue()),
+        (getLevel_2_rotationValue(), getLevel_2_ampValue()),
+        (getLevel_3_rotationValue(), getLevel_3_ampValue()),
+        (getLevel_4_rotationValue(), getLevel_4_ampValue()),
+        (getLevel_5_rotationValue(), getLevel_5_ampValue())]
+    else:
+        animationList = [(1.0, 0.5), (1.0, 0.5), (1.0, 0.5), (1.0, 0.5), (1.0, 0.5)]
+    
+    print("Creating levels...")
+    createLevels(levels, version)
+    print("Completed.")
+    print("Creating topper...")
+    createTopper(version, levels)
+    print("Complete.")
+    print("Creating gate...")
+    createGate(version)
+    print("Complete.")
+    
+    if(len(mc.ls('ground')) == 0):
+        createGroundPlane()
+    
+    print("Adjusting topper size...")
+    adjustTopperSize()
+    print("Complete.")
+    print("Updating max rides...")
+    updateMaxRides()
+    print("Complete.")
+    
+    if(levels > 1 and isEqualRadii(radius1, radius2, radius3, radius4, radius5, levels)):
+        for level in range(2, levels + 1):
+            print("Creating stairs...")
+            createStairs(version, radius1, level)
+            print("Complete.")
+            
+    for level in range(1, levels + 1):
+        print("Creating ride on each level...")
+        createRide(level, version)
+        print("Complete.")
+        print("Laying out rides...")
+        layoutRides(level, version)
+        print("Complete.")
+        print("Grouping rides to base...")
+        groupRidesToBase(level, version)
+        print("Complete.")
+             
+        ridesByRings = divideRidesByRings(level)
+        totalRings = len(ridesByRings)
+        totalRidesSet = 0
+        
+        amp = 0.0
+        period = 0.0
+        if(mc.checkBoxGrp("defaultBox", query=True, value1=True) == True):
+            amp = 1.0
+            period = 5.0
+        else:
+            amp = getAmpByLevel(level)
+            period = getPeriodByLevel(level)
+                  
+        for ring in range(1, totalRings + 1):    
+            rideCount = int(ridesByRings[ring - 1])
+            for number in range(1, rideCount + 1):
+                totalRidesSet += 1
+                print("Setting the ride expressions...")
+                setRideExpression(level, version, amp, period, totalRidesSet)
+                print("Complete.")
+        
+        print("Setting the rotation expression...")
+        setRotationExpression(level, version, animationList)
+        print("Complete.")
+        
+def createLevels(numOfLevels, version):
+    radii = [getLevel_1_radius(), getLevel_2_radius(), getLevel_3_radius(), getLevel_4_radius(), getLevel_5_radius()]
+
+    if(numOfLevels > 1):
+        if(isEqualRadii(radii[0], radii[1], radii[2], radii[3], radii[4], numOfLevels)):
+            for level in range(0, numOfLevels):
+                objList = []
+                baseComponents = createBasePlates(radii[level], level + 1, version)
+                column = createNormalColumn(level + 1, version)
+                objList.append(baseComponents[0])
+                objList.append(column)
+                groupedObjs = groupComponents(objList, getLevelName(level + 1, version))
+                mc.move(0, level * 15.5025, 0, groupedObjs, r=True)     
+                mc.move(0, level * 15.5025, 0, getSpinnerPlate(level + 1, version), r=True)
+        else:
+            for level in range(0, numOfLevels):
+                objList = []
+                baseComponents = createBasePlates(radii[level], level + 1, version)
+                column = createElevatorColumn(level + 1, version)
+                objList.append(baseComponents[0])
+                objList.append(column)
+                groupedObjs = groupComponents(objList, getLevelName(level + 1, version))
+                mc.move(0, level * 15.5025, 0, groupedObjs, r=True)
+                mc.move(0, level * 15.5025, 0, getSpinnerPlate(level + 1, version), r=True)
+    else:
+        objList = []
+        baseComponents = createBasePlates(radii[0], 1, version)
+        column = createNormalColumn(1, version)
+        objList.append(baseComponents[0])
+        objList.append(column)
+        groupedObjs = groupComponents(objList, getLevelName(1, version))                        
+
+def adjustTopperHeight(version, levels):
+    topper = getTopperName(version)
+    mc.move(0, 15.506333 * (levels - 1), 0, topper, r=True)
+
+def adjustTopperSize():
+    version = len(mc.ls('merry_go_round_ver_*')) + 1
+    radius = 0
+    
+    if(getTopperSizePref() == "match"):
+        radius = getLevel_1_radius()
+        mc.floatSliderGrp("topperSlider", edit=True, value=float(radius))
+    else:
+        radius = getTopperRadius()
+    
+    scaleVal = convertToScaleValue(radius)
+    topper = getTopperName(version)
+       
+    mc.setAttr(topper + '.scaleX', scaleVal)
+    mc.setAttr(topper + '.scaleY', scaleVal)
+    mc.setAttr(topper + '.scaleZ', scaleVal)
+    updateMaxRides()
+
+def createTopper(version, levels):
+    list1 = createCircularPlates(version)
+    list2 = createArches(version)
+    list3 = createRoof(version)
+    list4 = createFlag(version)
+
+    master = combineLists(list1, list2, list3, list4)
+    topper = groupComponents(master, getTopperName(version))
+    pointPos = mc.pointPosition('tent_ver_' + str(version) + '.vtx[579]', w=True)
+    mc.move(pointPos[0], pointPos[1], pointPos[2], topper + '.scalePivot', topper + '.rotatePivot')
+    mc.move(0, 0.835822, 0, topper, r=True)
+    adjustTopperSize()
+    adjustTopperHeight(version, levels)
+    
+    return topper[0]
+
+def createStairs(version, radius, level):
+    if(len(mc.ls(getStairsName(version, level))) > 0):
+        mc.delete(getStairsName(version))
+        
+    bases = createStairsBase(version, radius, level)
+    steps = createSteps(version)
+    combined = combineLists(bases, steps)    
+    stairs = uniteComponents(combined, getStairsName(version, level))
+    mc.move(0, 15.531381 * (level - 2), 0, stairs[0], r=True) 
+
+def createStairsBase(version, radius, level):
+    if(len(mc.ls(getStairsName(version, level))) > 0):
+        mc.delete(getStairsName(version))
+    
+    objList = []
+    
+    bottom = mc.polyCube(w=4, h=1.5, d=4, sx=7, sy=1, sz=1, n='bottomStairBase_ver_' + str(version) + '_level_' + str(level))
+    mc.move(0, -11.535, 17.04, bottom[0], r=True)
+    mc.symmetricModelling(s=True, ax='x')
+    
+    vtxBottom1 = 0
+    vtxBottom2 = 8
+    vtxTop1 = 16
+    vtxTop2 = 24
+    translationValues = [-0.158621, -0.0866459, -0.0332788]
+    for x in range(0, 3):
+        fullObjBottom1 = bottom[0] + '.vtx[' + str(vtxBottom1) + ']'
+        fullObjBottom2 = bottom[0] + '.vtx[' + str(vtxBottom2) + ']'
+        fullObjTop1 = bottom[0] + '.vtx[' + str(vtxTop1) + ']'
+        fullObjTop2 = bottom[0] + '.vtx[' + str(vtxTop2) + ']'
+        
+        mc.select( fullObjBottom1, fullObjBottom2, fullObjTop1, fullObjTop2, sym=True )
+        mc.move( 0, 0, translationValues[x], r=True )
+        vtxBottom1 += 1
+        vtxBottom2 += 1
+        vtxTop1 += 1
+        vtxTop2 += 1
+        
+    mc.symmetricModelling( s=False )
+    mc.move(0, 0, 1.0025 * (radius - 15), bottom[0], r=True)
+    
+    objList.append(bottom[0])
+    
+    top = mc.duplicate(bottom[0], rr=True, n='topStairBase_ver_' + str(version) + '_level_' + str(level))
+    mc.move( 0, 0, 0, top[0] + '.rotatePivot', top[0] + '.scalePivot' )
+    mc.rotate( 0, 166.902 - adjustTopLanding(radius), 0, top[0], r=True)
+    mc.move( 0, 15.50633, 0, top[0], r=True )
+    
+    objList.append(top[0])
+    
+    mc.polyBevel(bottom[0] + '.e[7:13]', bottom[0] + '.e[36]', bottom[0] + '.e[14:20]', 
+        bottom[0] + '.e[0:6]', bottom[0] + '.e[52]', bottom[0] + '.e[21:27]', o=.25, oaf=1, af=1,sg=2, 
+        sa=30, mvt=.0001, ma=180, at=180 )
+    mc.polyBevel( top[0] + '.e[7:13]', top[0] + '.e[36]', top[0] + '.e[14:20]', 
+        top[0] + '.e[0:6]', top[0] + '.e[52]', top[0] + '.e[21:27]', o=.25, oaf=1, af=1,sg=2, 
+        sa=30, mvt=.0001, ma=180, at=180 )
+        
+    return objList
+        
+def createSteps(version):
+    objList = []
+    
+    radius = getLevel_1_radius()     
+    step = mc.polyCube(w=2, h=0.15, d=4, sx=10, sy=1, sz=1, n='step1')
+    mc.move(0, -10.685, 16.993, step[0], r=True)
+    mc.symmetricModelling(s=True, ax='x')
+        
+    vtxBottom1 = 1
+    vtxBottom2 = 12
+    vtxTop1 = 23
+    vtxTop2 = 34
+    translationValues = [0.0179919, 0.0305863, 0.0413814, 0.0485782, 0.0503774]
+    for x in range(0, 5):
+        fullObjBottom1 = step[0] + '.vtx[' + str(vtxBottom1) + ']'
+        fullObjBottom2 = step[0] + '.vtx[' + str(vtxBottom2) + ']'
+        fullObjTop1 = step[0] + '.vtx[' + str(vtxTop1) + ']'
+        fullObjTop2 = step[0] + '.vtx[' + str(vtxTop2) + ']'
+        
+        mc.select( fullObjBottom1, fullObjBottom2, fullObjTop1, fullObjTop2, sym=True )
+        mc.move( 0, 0, translationValues[x], r=True )
+        vtxBottom1 += 1
+        vtxBottom2 += 1
+        vtxTop1 += 1
+        vtxTop2 += 1
+        
+    mc.symmetricModelling(s=False)
+    
+    mc.move( 0, 0, 0, step[0] + '.rotatePivot', step[0] + '.scalePivot' )
+    mc.move( 0, 0.4, 1.0025 * (radius - 15), step[0], r=True )
+    
+    objList.append(step[0])
+    
+    bar1 = mc.polyCylinder( r=0.1, h=0.5, sx=24, sy=1, sz=1, n='stepBar1' )
+    mc.move( -0.793, -10.58, 15.21 + 1.0025 * (radius - 15), bar1[0], r=True )
+    
+    objList.append(bar1[0])
+    
+    bar2 = mc.duplicate( bar1[0], rr=True )
+    mc.move( 0, 0, 3.545524, bar2[0], r=True )
+    
+    objList.append(bar2[0])
+    
+    stairStep = uniteComponents(objList, 'step_1' )
+    rotateY_value = 6.9
+    mc.rotate( 0, rotateY_value, 0, stairStep[0], r=True )
+    
+    objList = []
+    
+    objList.append(stairStep[0])
+            
+    increment = adjustIncrement(radius)
+    
+    for x in range(0, 35):
+        stairStep = mc.duplicate( stairStep[0], rr=True )
+        mc.rotate(0, increment, 0, stairStep[0], r=True)
+        mc.move( 0, 0.4125, 0, stairStep[0], r=True )
+        objList.append(stairStep[0])
+    
+    retObj = uniteComponents(objList, getStairStepName(version))
+    mc.rotate(0, adjustStepRotation(radius), 0, retObj[0], r=True)
+    objList = []
+    objList.append(retObj[0])
+    
+    return objList
+
+def createRide(level, version):
+    head = createUnicornHead()
+    rightFront = createRightFrontLeg()
+    body = createBody()
+    rightBack = createRightBackLeg()
+    rightFront = uniteComponents(rightFront, 'rightFrontLeg')
+    rightBack = uniteComponents(rightBack, 'rightBackLeg')
+    leftLegs = createLeftLegs()
+    allParts = [head[0], body[0], rightFront[0], rightBack[0], leftLegs[0], leftLegs[1]]
+    unicorn = uniteComponents(allParts, 'unicorn')
+    
+    mc.move( -2.339, -5.618, 10.777, unicorn[0], r=True )
+    mc.rotate(0, 0, 0, unicorn[0])
+    mc.scale(0.253, 0.253, 0.253, unicorn[0])
+    mc.move( 0, 0, 0, unicorn[0] + '.scalePivot', unicorn[0] + '.rotatePivot')
+    mc.makeIdentity( unicorn[0], a=True, t=True, r=True, s=True )
+    
+    pole = createPole()
+    
+    rideList = [unicorn[0], pole[0]]
+    ride = groupComponents(rideList, getUnicornName(level, version, 1))
+    mc.move(1.62818, 0, -1.948001, ride, r=True)
+    mc.move(0, 0, 0, ride + '.scalePivot', ride + '.rotatePivot')
+    mc.makeIdentity( ride, a=True, t=True, r=True, s=True )
+    
+    return ride
+
+def layoutRing_1(level, version, startNumber, totalRides):
+    currRide = getRideName(level, version, startNumber)
+    totalRides -= 1
+    
+    while(totalRides > 0):
+        currRide = mc.duplicate(currRide, rr=True)
+        totalRides -= 1
+        mc.rotate(0, 45, 0, currRide[0], r=True) 
+
+def layoutRing_2(level, version, startNumber, totalRides):
+    currRide = getRideName(level, version, startNumber)
+    currRide = mc.duplicate(currRide, rr=True)
+    totalRides -= 1
+    mc.move(0, 0, 5, currRide[0], r=True)
+    mc.move(0, 0, 0, currRide[0] + '.scalePivot', currRide[0] + '.rotatePivot') 
+    mc.rotate(0, 22.5, 0, currRide[0], r=True)
+    
+    while(totalRides > 0):
+        currRide = mc.duplicate(currRide, rr=True)
+        totalRides -= 1
+        mc.rotate(0, 45, 0, currRide[0], r=True)
+
+def layoutRing_3(level, version, startNumber, totalRides):
+    currRide = getRideName(level, version, startNumber)
+    currRide = mc.duplicate(currRide, rr=True)
+    totalRides -= 1
+    mc.move(0, 0, 10, currRide[0], r=True)
+    mc.move(0, 0, 0, currRide[0] + '.scalePivot', currRide[0] + '.rotatePivot')
+    
+    while(totalRides > 0):
+        currRide = mc.duplicate(currRide, rr=True)
+        totalRides -= 1
+        mc.rotate(0, 45, 0, currRide[0], r=True)
+        
+def layoutRing_4(level, version, startNumber, totalRides):
+    currRide = getRideName(level, version, startNumber)
+    currRide = mc.duplicate(currRide, rr=True)
+    totalRides -= 1
+    mc.move(0, 0, 15, currRide[0], r=True)
+    mc.move(0, 0, 0, currRide[0] + '.scalePivot', currRide[0] + '.rotatePivot')
+    mc.rotate(0, 22.5, 0, currRide[0], r=True)
+    
+    while(totalRides > 0):
+        currRide = mc.duplicate(currRide, rr=True)
+        totalRides -= 1
+        mc.rotate(0, 45, 0, currRide[0], r=True)
+
+def layoutRing_5(level, version, startNumber, totalRides):
+    currRide = getRideName(level, version, startNumber)
+    currRide = mc.duplicate(currRide, rr=True)
+    totalRides -= 1
+    mc.move(0, 0, 20, currRide[0], r=True)
+    mc.move(0, 0, 0, currRide[0] + '.scalePivot', currRide[0] + '.rotatePivot')
+    
+    while(totalRides > 0):
+        currRide = mc.duplicate(currRide, rr=True)
+        totalRides -= 1
+        mc.rotate(0, 45, 0, currRide[0], r=True)    
+
+def layoutRing_6(level, version, startNumber, totalRides):
+    currRide = getRideName(level, version, startNumber)
+    currRide = mc.duplicate(currRide, rr=True)
+    totalRides -= 1
+    mc.move(0, 0, 25, currRide[0], r=True)
+    mc.move(0, 0, 0, currRide[0] + '.scalePivot', currRide[0] + '.rotatePivot')
+    mc.rotate(0, 22.5, 0, currRide[0], r=True)
+    
+    while(totalRides > 0):
+        currRide = mc.duplicate(currRide, rr=True)
+        totalRides -= 1
+        mc.rotate(0, 45, 0, currRide[0], r=True)
+
+def layoutRing_7(level, version, startNumber, totalRides):
+    currRide = getRideName(level, version, startNumber)
+    currRide = mc.duplicate(currRide, rr=True)
+    totalRides -= 1
+    mc.move(0, 0, 30, currRide[0], r=True)
+    mc.move(0, 0, 0, currRide[0] + '.scalePivot', currRide[0] + '.rotatePivot')
+    
+    while(totalRides > 0):
+        currRide = mc.duplicate(currRide, rr=True)
+        totalRides -= 1
+        mc.rotate(0, 45, 0, currRide[0], r=True)  
+
+def layoutRing_8(level, version, startNumber, totalRides):
+    currRide = getRideName(level, version, startNumber)
+    currRide = mc.duplicate(currRide, rr=True)
+    totalRides -= 1
+    mc.move(0, 0, 35, currRide[0], r=True)
+    mc.move(0, 0, 0, currRide[0] + '.scalePivot', currRide[0] + '.rotatePivot')
+    mc.rotate(0, 22.5, 0, currRide[0], r=True)
+    
+    while(totalRides > 0):
+        currRide = mc.duplicate(currRide, rr=True)
+        totalRides -= 1
+        mc.rotate(0, 45, 0, currRide[0], r=True)
+
+def layoutRides(level, version):
+    ridesByRings = divideRidesByRings(level)
+    totalRings = len(ridesByRings)
+    
+    for ring in range(1, totalRings + 1):
+        rideCount = int(ridesByRings[ring - 1])
+        if(ring == 1):
+            layoutRing_1(level, version, 1, rideCount)
+        elif(ring == 2):
+            layoutRing_2(level, version, 1, rideCount)
+        elif(ring == 3):
+            layoutRing_3(level, version, 1, rideCount)           
+        elif(ring == 4):
+            layoutRing_4(level, version, 1, rideCount)           
+        elif(ring == 5):
+            layoutRing_5(level, version, 1, rideCount)
+        elif(ring == 6):
+            layoutRing_6(level, version, 1, rideCount)
+        elif(ring == 7):
+            layoutRing_7(level, version, 1, rideCount)
+        else:              
+            layoutRing_8(level, version, 1, rideCount)
+        
+    rideList = mc.ls('level_' + str(level) + '_unicorn_ver_' + str(version) + '_*')
+    grouped = groupComponents(rideList, 'level_' + str(level) + '_rides_ver_' + str(version))
+    
+    if(level != 1):
+        mc.move(0, 15.52684 * (level - 1), 0, grouped, r=True)
+        
+def layoutStreetLamps(version, radius):
+    light = createStreetLight(version)
+    print(light)
+    print(str(radius))
+    mc.move((radius - 15.0) * -1, 0, 0, light, r=True)
+    mc.move(0, 0, 0, light + '.scalePivot', light + '.rotatePivot')
+    
+    light = mc.duplicate(light)
+    for x in range(0, 4):
+        mc.rotate(0, -45, 0, light[0], r=True)
+        if(x != 3):
+            light = mc.duplicate(light[0])
+        
+        
+###########################################################################################################
+                                       #                               #
+                                       #       Utility Functions       #
+                                       #                               #
+                                       #################################   
+
+def getRotationExpName(level, version):
+    return "level_" + str(level) + "_rotation_ver_" + str(version)
+    
+def getAmpExpName(level, version):
+    return "level_" + str(level) + "_amplitude_ver_" + str(version) + "_1"
+
+def groupRidesToBase(level, version):
+    plateWithRides = [getSpinnerPlate(level, version), getRideGroup(level, version)] 
+    groupComponents(plateWithRides, getSpinnerRideGroup(level, version))
+    
+    nextGroup = [getSpinnerRideGroup(level, version), getLevelName(level, version)]
+    groupComponents(nextGroup, getBaseRideGroup(level, version))
+
+def divideRidesByRings(level):
+    maxRides = 0
+    rideList = []
+    if(level == 1):
+        maxRides = getLevel_1_rides()
+    elif(level == 2):
+        maxRides = getLevel_2_rides()
+    elif(level == 3):
+        maxRides = getLevel_3_rides()
+    elif(level == 4):
+        maxRides = getLevel_4_rides()
+    else:
+        maxRides = getLevel_5_rides()
+    
+    currCount = 0    
+    while(maxRides != 0):
+        currCount += 1
+        maxRides -= 1
+        if(currCount == 8):
+            rideList.append(currCount)
+            currCount = 0
+    
+    if(currCount != 0):
+        rideList.append(currCount)
+    
+    return rideList        
+
+def getBaseRideGroup(level, version):
+    return 'level_' + str(level) + '_base_ride_ver_' + str(version)
+
+def getSpinnerRideGroup(level, version):
+    return 'level_' + str(level) + '_ride_plate_ver_' + str(version)
+
+def getSpinnerPlate(level, version):
+    return 'level_' + str(level) + '_spinner_plate_ver_' + str(version)
+
+def getRideGroup(level, version):
+    return 'level_' + str(level) + '_rides_ver_' + str(version)
+
+def getRideName(level, version, number):
+    return 'level_' + str(level) + '_unicorn_ver_' + str(version) + '_' + str(number)
+    
+
+def getUnicornName(level, version, number):
+    return 'level_' + str(level) + '_unicorn_ver_' + str(version) + '_' + str(number)
+
+def adjustStepRotation(radius):
+    decrement = -0.607263
+    trueRadius = radius - 15
+    multiplier = trueRadius / 2
+    
+    for val in range(1, multiplier + 1):
+        if(val >= 1 and val < 3):
+            decrement = decrement * val
+        elif(val >= 3 and val < 10):
+            decrement = decrement - 0.3
+        elif(val >= 10 and val < 13):
+            decrement = decrement - 0.2
+        elif(val >= 13 and val < 18):
+            decrement = decrement - 0.1
+        
+    return decrement
+
+def adjustTopLanding(radius):
+    decrement = 0.0
+    trueRadius = radius - 15
+    multiplier = trueRadius
+    
+    for val in range(0, multiplier):
+        if(val >= 0 and val < 10):
+            decrement = decrement + 4.766627
+        elif(val >= 10 and val < 11):
+            decrement = decrement + 3.65
+        elif(val >= 11 and val < 14):
+            decrement = decrement + 3.0
+        elif(val >= 14 and val < 20):
+            decrement = decrement + 2.8
+        elif(val >= 20 and val < 25):
+            decrement = decrement + 2.0
+        elif(val >= 25 and val < 30):
+            decrement = decrement + 1.75
+        elif(val >= 30 and val < 33):
+            decrement = decrement + 2.0
+        else:
+            decrement = decrement + 1.8
+    
+    return decrement
+
+def adjustFirstStep(radius):
+    increment = 6.9
+    trueRadius = radius - 15
+    
+    multiplier = trueRadius / 5
+    
+    for val in range(1, multiplier + 1):
+        increment = increment - 1.05
+        
+    return increment
+
+def adjustIncrement(radius):
+    increment = 4.357
+    trueRadius = radius - 15
+    
+    for val in range(0, trueRadius):
+        if(val >= 0 and val < 10):
+            increment = increment - 0.125
+        elif(val >= 10 and val < 20):
+            increment = increment - 0.075
+        elif(val >= 20 and val < 30):
+            increment = increment - 0.05
+        else:
+            increment = increment - 0.05
+        
+    return increment
+
+def convertToScaleValue(x):
+    scaleInc = .071449
+    val = x - 15.0
+    
+    return (scaleInc * val) + 1
+
+def getExpressionName(level, version):
+    return 'ride_' + str(level) + '_ver_' + str(version) + '_rotationExp'
+                                       
+def getLevelName(level, version):
+    return "level_" + str(level) + "_ver_" + str(version)
+
+def getBaseName(level, version):
+    return "level_" + str(level) + "_base_ver_" + str(version)
+
+def getColumnName(level, version):
+    return "level_" + str(level) + "_centerColumn_ver_" + str(version)
+
+def getLightsName(level, version, number):
+    return "level_" + str(level) + "_lights_ver_" + str(version) + "_" + str(number)
+
+def getTopperName(version):
+    return "topper_ver_" + str(version)
+
+def groupComponents(objList, groupName):
+    obj = mc.group(objList, n=groupName)
+    mc.delete(ch=True, e=False, c=False, all=True)
+    return obj
+    
+def uniteComponents(objList, objName):
+    obj = mc.polyUnite(objList, n=objName)
+    mc.delete(ch=True, e=False, c=False, all=True)
+    return obj     
+    
+def isEqualRadii(*args):
+    numOfLevels = args[5]
+    for index in range(1, numOfLevels):
+        if(args[index] != args[index - 1]):
+            return False
+    
+    return True
+
+def deleteNonFinalizedRides():
+    merryGoRoundList = mc.ls('merry_go_round_ver_*')
+    if(len(merryGoRoundList) >= 1):
+        mc.select(ado=True)
+        mc.select('merry_go_round_ver_*', 'ground', hi=True, d=True)
+        list = mc.ls(sl=True)
+        
+        if(len(list) != 0):
+                mc.delete(list)
+    else:
+        allObjs = mc.ls()
+        if(len(allObjs) > 0):
+            mc.select(ado=True)
+            list = mc.ls(sl=True)
+            if(len(list) != 0):
+                mc.delete(list)
+        
+def combineLists(*args):
+    masterList = []
+    for list in args:
+        for obj in list:
+            masterList.append(obj)
+    
+    return masterList
+
+def getStairStepName(version):
+    return 'stairsteps_ver_' + str(version) + '_1'
+    
+def getStairsName(version, level):
+    return 'stairs_ver_' + str(version) + '_level_' + str(level)
+     
+###########################################################################################################
+                                       #                               #
+                                       #   User Interface Functions    #
+                                       #                               #
+                                       #################################
+                                       
+def createUI():
+    if mc.window("MyWindow", exists=True):
+        mc.deleteUI("MyWindow")
+    
+    uiWindow = mc.window( "MyWindow", t="Merry-Go-Round Options", w=500, h=300, mxb=False, mnb=False, s=False,  )
+    mc.columnLayout(adj = True, columnWidth=500)
+    mc.separator(h=15, style="none")
+    
+    mc.text("Number of Levels", al="center")
+    mc.separator(h=10, style="none")
+    levels = mc.intSliderGrp("levelSlider", field=True, label="Levels:  ", minValue=1, maxValue=5, fieldMinValue=1, fieldMaxValue=10, value=1, cc="createMerryGoRound()")
+    mc.separator(h=10, style="none")
+    
+    mc.text("Foundation Size", al="center")
+    mc.separator(h=10, style="none")
+    mc.intSliderGrp("radiusSlider1", field=True, label="Base Radius:  ", minValue=15, maxValue=50, value=15, cc='createMerryGoRound()')
+    mc.intSliderGrp("radiusSlider2", field=True, label="Level 2 Radius:  ", enable=False, minValue=15, maxValue=50, value=15, cc='createMerryGoRound()')
+    mc.intSliderGrp("radiusSlider3", field=True, label="Level 3 Radius:  ", enable=False, minValue=15, maxValue=50, value=15, cc='createMerryGoRound()')
+    mc.intSliderGrp("radiusSlider4", field=True, label="Level 4 Radius:  ", enable=False, minValue=15, maxValue=50, value=15, cc='createMerryGoRound()')
+    mc.intSliderGrp("radiusSlider5", field=True, label="Level 5 Radius:  ", enable=False, minValue=15, maxValue=50, value=15, cc='createMerryGoRound()')
+    mc.separator(h=10, style="none")
+    
+    mc.text("Topper Size", al="center")
+    mc.separator(h=10, style="none")
+    topper = mc.radioButtonGrp("topperRadio", label='Select a preference:  ', labelArray2=['Match', 'Custom'], numberOfRadioButtons=2, sl=0, cc='toggleTopperRadiusSlider()')
+    custTopperSize = mc.floatSliderGrp("topperSlider", field=True, label="Topper Radius:  ", minValue=15.0, maxValue=75.0, step=0.1, value=15.0, enable=False, cc='createMerryGoRound()')
+    
+    mc.separator(h=10, style="none")
+    mc.text("Number of Rides", al="center")
+    mc.separator(h=10, style="none")
+    rides1 = mc.intSliderGrp("rideSlider1", field=True, label="Level 1 Rides:  ", minValue=1, maxValue=1, value=1, cc='createMerryGoRound()')
+    rides2 = mc.intSliderGrp("rideSlider2", field=True, label="Level 2 Rides:  ", enable=False, minValue=1, maxValue=1, value=1, cc='createMerryGoRound()')
+    rides3 = mc.intSliderGrp("rideSlider3", field=True, label="Level 3 Rides:  ", enable=False, minValue=1, maxValue=1, value=1, cc='createMerryGoRound()')
+    rides4 = mc.intSliderGrp("rideSlider4", field=True, label="Level 4 Rides:  ", enable=False, minValue=1, maxValue=1, value=1, cc='createMerryGoRound()')
+    rides5 = mc.intSliderGrp("rideSlider5", field=True, label="Level 5 Rides:  ", enable=False, minValue=1, maxValue=1, value=1, cc='createMerryGoRound()')
+    mc.separator(h=10, style="none")
+    
+    mc.text("Animation Speed", al="center")
+    mc.separator(h=10, style="none")
+    mc.checkBoxGrp("defaultBox", columnWidth2=[275, 165], numberOfCheckBoxes=1, label='Default:  ', v1=True, cc='createMerryGoRound()')
+    mc.separator(h=10, style="none")
+    
+    mc.text("Level 1", al="center")
+    mc.separator(h=5, style="none")
+    mc.floatSliderGrp("rotationSlider1", field=True, label="Plate Rotation:  ", minValue=0.1, maxValue=5.0, step=0.01, value=1.0, enable=False, cc='createMerryGoRound()')
+    mc.floatSliderGrp("amplitudeSlider1", field=True, label="Rise multiplier:  ", minValue=0.5, maxValue=2.0, step=0.01, value=0.5, enable=False, cc='createMerryGoRound()')
+    mc.floatSliderGrp("periodSlider1", field=True, label="Period multiplier:  ", minValue=0.1, maxValue=10.0, step=0.01, value=1, enable=False, cc='createMerryGoRound()')
+    
+    mc.separator(h=15, style="none")
+    
+    mc.text("Level 2", al="center")
+    mc.separator(h=5, style="none")
+    mc.floatSliderGrp("rotationSlider2", field=True, label="Plate Rotation:  ", minValue=0.1, maxValue=5.0, step=0.01, value=1.0, enable=False, cc='createMerryGoRound()')
+    mc.floatSliderGrp("amplitudeSlider2", field=True, label="Rise multiplier:  ", minValue=0.5, maxValue=2.0, step=0.01, value=0.5, enable=False, cc='createMerryGoRound()')
+    mc.floatSliderGrp("periodSlider2", field=True, label="Period multiplier:  ", minValue=0.1, maxValue=10.0, step=0.01, value=1, enable=False, cc='createMerryGoRound()')
+    
+    mc.separator(h=10, style="none")
+    
+    mc.text("Level 3", al="center")
+    mc.separator(h=5, style="none")
+    mc.floatSliderGrp("rotationSlider3", field=True, label="Plate Rotation:  ", minValue=0.1, maxValue=5.0, step=0.01, value=1.0, enable=False, cc='createMerryGoRound()')
+    mc.floatSliderGrp("amplitudeSlider3", field=True, label="Rise multiplier:  ", minValue=0.5, maxValue=2.0, step=0.01, value=0.5, enable=False, cc='createMerryGoRound()')
+    mc.floatSliderGrp("periodSlider3", field=True, label="Period multiplier:  ", minValue=0.1, maxValue=10.0, step=0.01, value=1, enable=False, cc='createMerryGoRound()')
+    
+    mc.separator(h=10, style="none")
+    
+    mc.text("Level 4", al="center")
+    mc.separator(h=5, style="none")
+    mc.floatSliderGrp("rotationSlider4", field=True, label="Plate Rotation:  ", minValue=0.1, maxValue=5.0, step=0.01, value=1.0, enable=False, cc='createMerryGoRound()')
+    mc.floatSliderGrp("amplitudeSlider4", field=True, label="Rise multiplier:  ", minValue=0.5, maxValue=2.0, step=0.01, value=0.5, enable=False, cc='createMerryGoRound()')
+    mc.floatSliderGrp("periodSlider4", field=True, label="Period multiplier:  ", minValue=0.1, maxValue=10.0, step=0.01, value=1, enable=False, cc='createMerryGoRound()')
+    
+    mc.separator(h=10, style="none")
+    
+    mc.text("Level 5", al="center")
+    mc.separator(h=5, style="none")
+    mc.floatSliderGrp("rotationSlider5", field=True, label="Plate Rotation:  ", minValue=0.1, maxValue=5.0, step=0.01, value=1.0, enable=False, cc='createMerryGoRound()')
+    mc.floatSliderGrp("amplitudeSlider5", field=True, label="Amplitude:  ", minValue=0.5, maxValue=2.0, step=0.01, value=0.5, enable=False, cc='createMerryGoRound()')
+    mc.floatSliderGrp("periodSlider5", field=True, label="Period multiplier:  ", minValue=0.1, maxValue=10.0, step=0.01, value=1, enable=False, cc='createMerryGoRound()')
+    
+    mc.separator(h=10, style="none")
+    
+    mc.button(label="Create", command='finalizeRide()')
+    
+    mc.showWindow(uiWindow)
+    createMerryGoRound()
+
+def getRotationByLevel(level):
+    if(level == 1):
+        return getLevel_1_rotationValue()
+    elif(level == 2):
+        return getLevel_2_rotationValue()
+    elif(level == 3):
+        return getLevel_3_rotationValue()
+    elif(level == 4):
+        return getLevel_4_rotationValue()
+    else:
+        return getLevel_5_rotationValue()
+    
+def getAmpByLevel(level):
+    if(level == 1):
+        return getLevel_1_ampValue()
+    elif(level == 2):
+        return getLevel_2_ampValue()
+    elif(level == 3):
+        return getLevel_3_ampValue()
+    elif(level == 4):
+        return getLevel_4_ampValue()
+    else:
+        return getLevel_5_ampValue()
+
+def getPeriodByLevel(level):
+    if(level == 1):
+        return getLevel_1_periodValue()
+    elif(level == 2):
+        return getLevel_2_periodValue()
+    elif(level == 3):
+        return getLevel_3_periodValue()
+    elif(level == 4):
+        return getLevel_4_periodValue()
+    else:
+        return getLevel_5_periodValue()
+
+def toggleAnimSlidersByLevels(numOfLevels):
+    if(numOfLevels == 1):
+        mc.floatSliderGrp("rotationSlider1", edit=True, enable=True)
+        mc.floatSliderGrp("rotationSlider2", edit=True, enable=False)
+        mc.floatSliderGrp("rotationSlider3", edit=True, enable=False)
+        mc.floatSliderGrp("rotationSlider4", edit=True, enable=False)
+        mc.floatSliderGrp("rotationSlider5", edit=True, enable=False)
+        mc.floatSliderGrp("amplitudeSlider1", edit=True, enable=True)
+        mc.floatSliderGrp("amplitudeSlider2", edit=True, enable=False)
+        mc.floatSliderGrp("amplitudeSlider3", edit=True, enable=False)
+        mc.floatSliderGrp("amplitudeSlider4", edit=True, enable=False)
+        mc.floatSliderGrp("amplitudeSlider5", edit=True, enable=False)
+        mc.floatSliderGrp("periodSlider1", edit=True, enable=True)
+        mc.floatSliderGrp("periodSlider2", edit=True, enable=False)
+        mc.floatSliderGrp("periodSlider3", edit=True, enable=False)
+        mc.floatSliderGrp("periodSlider4", edit=True, enable=False)
+        mc.floatSliderGrp("periodSlider5", edit=True, enable=False)
+    elif(numOfLevels == 2):
+        mc.floatSliderGrp("rotationSlider1", edit=True, enable=True)
+        mc.floatSliderGrp("rotationSlider2", edit=True, enable=True)
+        mc.floatSliderGrp("rotationSlider3", edit=True, enable=False)
+        mc.floatSliderGrp("rotationSlider4", edit=True, enable=False)
+        mc.floatSliderGrp("rotationSlider5", edit=True, enable=False)
+        mc.floatSliderGrp("amplitudeSlider1", edit=True, enable=True)
+        mc.floatSliderGrp("amplitudeSlider2", edit=True, enable=True)
+        mc.floatSliderGrp("amplitudeSlider3", edit=True, enable=False)
+        mc.floatSliderGrp("amplitudeSlider4", edit=True, enable=False)
+        mc.floatSliderGrp("amplitudeSlider5", edit=True, enable=False)
+        mc.floatSliderGrp("periodSlider1", edit=True, enable=True)
+        mc.floatSliderGrp("periodSlider2", edit=True, enable=True)
+        mc.floatSliderGrp("periodSlider3", edit=True, enable=False)
+        mc.floatSliderGrp("periodSlider4", edit=True, enable=False)
+        mc.floatSliderGrp("periodSlider5", edit=True, enable=False)
+    elif(numOfLevels == 3):
+        mc.floatSliderGrp("rotationSlider1", edit=True, enable=True)
+        mc.floatSliderGrp("rotationSlider2", edit=True, enable=True)
+        mc.floatSliderGrp("rotationSlider3", edit=True, enable=True)
+        mc.floatSliderGrp("rotationSlider4", edit=True, enable=False)
+        mc.floatSliderGrp("rotationSlider5", edit=True, enable=False)
+        mc.floatSliderGrp("amplitudeSlider1", edit=True, enable=True)
+        mc.floatSliderGrp("amplitudeSlider2", edit=True, enable=True)
+        mc.floatSliderGrp("amplitudeSlider3", edit=True, enable=True)
+        mc.floatSliderGrp("amplitudeSlider4", edit=True, enable=False)
+        mc.floatSliderGrp("amplitudeSlider5", edit=True, enable=False)
+        mc.floatSliderGrp("periodSlider1", edit=True, enable=True)
+        mc.floatSliderGrp("periodSlider2", edit=True, enable=True)
+        mc.floatSliderGrp("periodSlider3", edit=True, enable=True)
+        mc.floatSliderGrp("periodSlider4", edit=True, enable=False)
+        mc.floatSliderGrp("periodSlider5", edit=True, enable=False)
+    elif(numOfLevels == 4):
+        mc.floatSliderGrp("rotationSlider1", edit=True, enable=True)
+        mc.floatSliderGrp("rotationSlider2", edit=True, enable=True)
+        mc.floatSliderGrp("rotationSlider3", edit=True, enable=True)
+        mc.floatSliderGrp("rotationSlider4", edit=True, enable=True)
+        mc.floatSliderGrp("rotationSlider5", edit=True, enable=False)
+        mc.floatSliderGrp("amplitudeSlider1", edit=True, enable=True)
+        mc.floatSliderGrp("amplitudeSlider2", edit=True, enable=True)
+        mc.floatSliderGrp("amplitudeSlider3", edit=True, enable=True)
+        mc.floatSliderGrp("amplitudeSlider4", edit=True, enable=True)
+        mc.floatSliderGrp("amplitudeSlider5", edit=True, enable=False)
+        mc.floatSliderGrp("periodSlider1", edit=True, enable=True)
+        mc.floatSliderGrp("periodSlider2", edit=True, enable=True)
+        mc.floatSliderGrp("periodSlider3", edit=True, enable=True)
+        mc.floatSliderGrp("periodSlider4", edit=True, enable=True)
+        mc.floatSliderGrp("periodSlider5", edit=True, enable=False)
+    else:
+        mc.floatSliderGrp("rotationSlider1", edit=True, enable=True)
+        mc.floatSliderGrp("rotationSlider2", edit=True, enable=True)
+        mc.floatSliderGrp("rotationSlider3", edit=True, enable=True)
+        mc.floatSliderGrp("rotationSlider4", edit=True, enable=True)
+        mc.floatSliderGrp("rotationSlider5", edit=True, enable=True)
+        mc.floatSliderGrp("amplitudeSlider1", edit=True, enable=True)
+        mc.floatSliderGrp("amplitudeSlider2", edit=True, enable=True)
+        mc.floatSliderGrp("amplitudeSlider3", edit=True, enable=True)
+        mc.floatSliderGrp("amplitudeSlider4", edit=True, enable=True)
+        mc.floatSliderGrp("amplitudeSlider5", edit=True, enable=True)
+        mc.floatSliderGrp("periodSlider1", edit=True, enable=True)
+        mc.floatSliderGrp("periodSlider2", edit=True, enable=True)
+        mc.floatSliderGrp("periodSlider3", edit=True, enable=True)
+        mc.floatSliderGrp("periodSlider4", edit=True, enable=True)
+        mc.floatSliderGrp("periodSlider5", edit=True, enable=True)
+        
+
+def togglePeriodAmpSliders():
+    if(mc.checkBoxGrp("defaultBox", query=True, value1=True) == False):
+        numOfLevels = getLevelsValue()
+        toggleAnimSlidersByLevels(numOfLevels)
+    else:
+        mc.floatSliderGrp("rotationSlider1", edit=True, enable=False)
+        mc.floatSliderGrp("rotationSlider2", edit=True, enable=False)
+        mc.floatSliderGrp("rotationSlider3", edit=True, enable=False)
+        mc.floatSliderGrp("rotationSlider4", edit=True, enable=False)
+        mc.floatSliderGrp("rotationSlider5", edit=True, enable=False)
+        mc.floatSliderGrp("amplitudeSlider1", edit=True, enable=False)
+        mc.floatSliderGrp("amplitudeSlider2", edit=True, enable=False)
+        mc.floatSliderGrp("amplitudeSlider3", edit=True, enable=False)
+        mc.floatSliderGrp("amplitudeSlider4", edit=True, enable=False)
+        mc.floatSliderGrp("amplitudeSlider5", edit=True, enable=False)
+        mc.floatSliderGrp("periodSlider1", edit=True, enable=False)
+        mc.floatSliderGrp("periodSlider2", edit=True, enable=False)
+        mc.floatSliderGrp("periodSlider3", edit=True, enable=False)
+        mc.floatSliderGrp("periodSlider4", edit=True, enable=False)
+        mc.floatSliderGrp("periodSlider5", edit=True, enable=False)
+
+def getLevel_1_rotationValue():
+    return mc.floatSliderGrp("rotationSlider1", query=True, value=True)
+
+def getLevel_2_rotationValue():
+    return mc.floatSliderGrp("rotationSlider2", query=True, value=True)
+
+def getLevel_3_rotationValue():
+    return mc.floatSliderGrp("rotationSlider3", query=True, value=True)
+
+def getLevel_4_rotationValue():
+    return mc.floatSliderGrp("rotationSlider4", query=True, value=True)
+
+def getLevel_5_rotationValue():
+    return mc.floatSliderGrp("rotationSlider5", query=True, value=True)
+
+def getLevel_1_ampValue():
+    return mc.floatSliderGrp("amplitudeSlider1", query=True, value=True)
+
+def getLevel_2_ampValue():
+    return mc.floatSliderGrp("amplitudeSlider2", query=True, value=True)
+
+def getLevel_3_ampValue():
+    return mc.floatSliderGrp("amplitudeSlider3", query=True, value=True)
+
+def getLevel_4_ampValue():
+    return mc.floatSliderGrp("amplitudeSlider4", query=True, value=True)
+
+def getLevel_5_ampValue():
+    return mc.floatSliderGrp("amplitudeSlider5", query=True, value=True)
+
+def getLevel_1_periodValue():
+    return mc.floatSliderGrp("periodSlider1", query=True, value=True)
+
+def getLevel_2_periodValue():
+    return mc.floatSliderGrp("periodSlider2", query=True, value=True)
+
+def getLevel_3_periodValue():
+    return mc.floatSliderGrp("periodSlider3", query=True, value=True)
+
+def getLevel_4_periodValue():
+    return mc.floatSliderGrp("periodSlider4", query=True, value=True)
+
+def getLevel_5_periodValue():
+    return mc.floatSliderGrp("periodSlider5", query=True, value=True)
+    
+def getMaxRides(radius):
+    default = 8
+    multiplier = (radius - 10.0) / 5
+    
+    return (default * multiplier)
+
+def getLevelsValue():
+    return mc.intSliderGrp("levelSlider", query=True, value=True)
+    
+def getLevel_1_radius():
+    return mc.intSliderGrp("radiusSlider1", query=True, value=True)
+    
+def getLevel_2_radius():
+    return mc.intSliderGrp("radiusSlider2", query=True, value=True)
+    
+def getLevel_3_radius():
+    return mc.intSliderGrp("radiusSlider3", query=True, value=True)
+    
+def getLevel_4_radius():
+    return mc.intSliderGrp("radiusSlider4", query=True, value=True)
+
+def getLevel_5_radius():
+    return mc.intSliderGrp("radiusSlider5", query=True, value=True)
+
+def getLevel_1_rides():
+    return mc.intSliderGrp("rideSlider1", query=True, value=True)
+    
+def getLevel_2_rides():
+    return mc.intSliderGrp("rideSlider2", query=True, value=True)
+    
+def getLevel_3_rides():
+    return mc.intSliderGrp("rideSlider3", query=True, value=True)
+    
+def getLevel_4_rides():
+    return mc.intSliderGrp("rideSlider4", query=True, value=True)
+    
+def getLevel_5_rides():
+    return mc.intSliderGrp("rideSlider5", query=True, value=True)
+
+   
+    
+def updateMaxRides():
+    radius1 = getLevel_1_radius()
+    radius2 = getLevel_2_radius()
+    radius3 = getLevel_3_radius()
+    radius4 = getLevel_4_radius()
+    radius5 = getLevel_5_radius()
+    topperRadius = getTopperRadius()
+    numOfLevels = getLevelsValue()
+    
+    max1 = 0
+    max2 = 0
+    max3 = 0
+    max4 = 0
+    max5 = 0
+    
+    newValue1 = 0
+    newValue2 = 0
+    newValue3 = 0
+    newValue4 = 0
+    newValue5 = 0
+        
+    if(numOfLevels == 1):
+        if(topperRadius < radius1):
+            max1 = getMaxRides(topperRadius)
+            currentRideVal = mc.intSliderGrp("rideSlider1", query=True, value=True)
+            if(currentRideVal > max1):
+                newValue1 = max1
+            else:
+                newValue1 = currentRideVal
+        else:
+            max1 = getMaxRides(radius1)
+            newValue1 = mc.intSliderGrp("rideSlider1", query=True, value=True)
+    elif(numOfLevels == 2):
+        if(topperRadius < radius2):
+            max2 = getMaxRides(topperRadius)
+            currentRideVal = mc.intSliderGrp("rideSlider2", query=True, value=True)
+            if(currentRideVal > max2):
+                newValue2 = max2      
+            else:
+                newValue2 = currentRideVal  
+        else:
+            max2 = getMaxRides(radius2)
+            newValue2 = mc.intSliderGrp("rideSlider2", query=True, value=True)
+            
+        if(radius2 < radius1):
+            max1 = getMaxRides(radius2)
+            currentRideVal = mc.intSliderGrp("rideSlider1", query=True, value=True)
+            if(currentRideVal > max1):
+                newValue1 = max1
+            else:
+                newValue1 = currentRideVal
+        else:
+            max1 = getMaxRides(radius1)
+            newValue1 = mc.intSliderGrp("rideSlider1", query=True, value=True)
+    elif(numOfLevels == 3):
+        if(topperRadius < radius3):
+            max3 = getMaxRides(topperRadius)
+            currentRideVal = mc.intSliderGrp("rideSlider3", query=True, value=True)
+            if(currentRideVal > max3):
+                newValue3 = max3
+            else:
+                newValue3 = currentRideVal
+        else:
+            max3 = getMaxRides(radius3)
+            newValue3 = mc.intSliderGrp("rideSlider3", query=True, value=True)
+            
+        if(radius3 < radius2):
+            max2 = getMaxRides(radius3)
+            currentRideVal = mc.intSliderGrp("rideSlider2", query=True, value=True)
+            if(currentRideVal > max2):
+                newValue2 = max2
+            else:
+                newValue2 = currentRideVal
+        else:
+            max2 = getMaxRides(radius2)
+            newValue2 = mc.intSliderGrp("rideSlider2", query=True, value=True)        
+        
+        if(radius2 < radius1):
+            max1 = getMaxRides(radius2)
+            currentRideVal = mc.intSliderGrp("rideSlider1", query=True, value=True)
+            if(currentRideVal > max1):
+                newValue1 = max1
+            else:
+                newValue1 = currentRideVal
+        else:
+            max1 = getMaxRides(radius1)
+            newValue1 = mc.intSliderGrp("rideSlider1", query=True, value=True)     
+    elif(numOfLevels == 4):
+        if(topperRadius < radius4):
+            max4 = getMaxRides(topperRadius)
+            currentRideVal = mc.intSliderGrp("rideSlider4", query=True, value=True)
+            if(currentRideVal > max4):
+                newValue4 = max4
+            else:
+                newValue4 = currentRideVal
+        else:
+            max4 = getMaxRides(radius4)
+            newValue4 = mc.intSliderGrp("rideSlider4", query=True, value=True)
+            
+        if(radius4 < radius3):
+            max3 = getMaxRides(radius4)
+            currentRideVal = mc.intSliderGrp("rideSlider3", query=True, value=True)
+            if(currentRideVal > max3):
+                newValue3 = max3
+            else:
+                newValue3 = currentRideVal
+        else:
+            max3 = getMaxRides(radius3)
+            newValue3 = mc.intSliderGrp("rideSlider3", query=True, value=True)       
+        
+        if(radius3 < radius2):
+            max2 = getMaxRides(radius3)
+            currentRideVal = mc.intSliderGrp("rideSlider2", query=True, value=True)
+            if(currentRideVal > max2):
+                newValue2 = max2
+            else:
+                newValue2 = currentRideVal
+        else:
+            max2 = getMaxRides(radius2)
+            newValue2 = mc.intSliderGrp("rideSlider2", query=True, value=True)
+        
+        if(radius2 < radius1):
+            max1 = getMaxRides(radius2)
+            currentRideVal = mc.intSliderGrp("rideSlider1", query=True, value=True)
+            if(currentRideVal > max1):
+                newValue1 = max1
+            else:
+                newValue1 = currentRideVal
+        else:
+            max1 = getMaxRides(radius1)
+            newValue1 = mc.intSliderGrp("rideSlider1", query=True, value=True) 
+    else:
+        if(topperRadius < radius5):
+            max5 = getMaxRides(topperRadius)
+            currentRideVal = mc.intSliderGrp("rideSlider5", query=True, value=True)
+            if(currentRideVal > max5):
+                newValue5 = max5
+            else:
+                newValue5 = currentRideVal
+        else:
+            max5 = getMaxRides(radius5)
+            newValue5 = mc.intSliderGrp("rideSlider5", query=True, value=True)
+            
+        if(radius5 < radius4):
+            max4 = getMaxRides(radius5)
+            currentRideVal = mc.intSliderGrp("rideSlider4", query=True, value=True)
+            if(currentRideVal > max4):
+                newValue4 = max4
+            else:
+                newValue4 = currentRideVal
+        else:
+            max4 = getMaxRides(radius4)   
+            newValue4 = mc.intSliderGrp("rideSlider4", query=True, value=True)     
+        
+        if(radius4 < radius3):
+            max3 = getMaxRides(radius4)
+            currentRideVal = mc.intSliderGrp("rideSlider3", query=True, value=True)
+            if(currentRideVal > max3):
+                newValue3 = max3
+            else:
+                newValue3 = currentRideVal            
+        else:
+            max3 = getMaxRides(radius3) 
+            newValue3 = mc.intSliderGrp("rideSlider3", query=True, value=True)       
+        
+        if(radius3 < radius2):
+            max2 = getMaxRides(radius3)
+            currentRideVal = mc.intSliderGrp("rideSlider2", query=True, value=True)
+            if(currentRideVal > max2):
+                newValue2 = max2
+            else:
+                newValue2 = currentRideVal
+        else:
+            max2 = getMaxRides(radius2)
+            newValue2 = mc.intSliderGrp("rideSlider2", query=True, value=True)
+            
+        if(radius2 < radius1):
+            max1 = getMaxRides(radius2)
+            currentRideVal = mc.intSliderGrp("rideSlider1", query=True, value=True)
+            if(currentRideVal > max1):
+                newValue1 = max1
+            else:
+                newValue1 = currentRideVal
+        else:
+            max1 = getMaxRides(radius1)
+            newValue1 = mc.intSliderGrp("rideSlider1", query=True, value=True)
+    
+    mc.intSliderGrp("rideSlider1", edit=True, max=int(max1), value=int(newValue1))
+    mc.intSliderGrp("rideSlider2", edit=True, max=int(max2), value=int(newValue2))
+    mc.intSliderGrp("rideSlider3", edit=True, max=int(max3), value=int(newValue3))
+    mc.intSliderGrp("rideSlider4", edit=True, max=int(max4), value=int(newValue4))
+    mc.intSliderGrp("rideSlider5", edit=True, max=int(max5), value=int(newValue5))
+    
+def enableRidesSliders():
+    numOfLevels = getLevelsValue()
+    if(numOfLevels == 1):
+        mc.intSliderGrp("rideSlider2", edit=True, enable=False, value=1)
+        mc.intSliderGrp("rideSlider3", edit=True, enable=False, value=1)
+        mc.intSliderGrp("rideSlider4", edit=True, enable=False, value=1)
+        mc.intSliderGrp("rideSlider5", edit=True, enable=False, value=1)
+    elif(numOfLevels == 2):
+        mc.intSliderGrp("rideSlider2", edit=True, enable=True)
+        mc.intSliderGrp("rideSlider3", edit=True, enable=False, value=1)
+        mc.intSliderGrp("rideSlider4", edit=True, enable=False, value=1)
+        mc.intSliderGrp("rideSlider5", edit=True, enable=False, value=1)
+    elif(numOfLevels == 3):
+        mc.intSliderGrp("rideSlider2", edit=True, enable=True)
+        mc.intSliderGrp("rideSlider3", edit=True, enable=True)
+        mc.intSliderGrp("rideSlider4", edit=True, enable=False, value=1)
+        mc.intSliderGrp("rideSlider5", edit=True, enable=False, value=1)
+    elif(numOfLevels == 4):
+        mc.intSliderGrp("rideSlider2", edit=True, enable=True)
+        mc.intSliderGrp("rideSlider3", edit=True, enable=True)
+        mc.intSliderGrp("rideSlider4", edit=True, enable=True)
+        mc.intSliderGrp("rideSlider5", edit=True, enable=False, value=1)
+    else:
+        mc.intSliderGrp("rideSlider2", edit=True, enable=True)
+        mc.intSliderGrp("rideSlider3", edit=True, enable=True)
+        mc.intSliderGrp("rideSlider4", edit=True, enable=True)
+        mc.intSliderGrp("rideSlider5", edit=True, enable=True)    
+
+def enableRadiiSliders():
+    numOfLevels = getLevelsValue()
+    if(numOfLevels == 1):
+        mc.intSliderGrp("radiusSlider2", edit=True, enable=False)
+        mc.intSliderGrp("radiusSlider3", edit=True, enable=False)
+        mc.intSliderGrp("radiusSlider4", edit=True, enable=False)
+        mc.intSliderGrp("radiusSlider5", edit=True, enable=False)
+    elif(numOfLevels == 2):
+        mc.intSliderGrp("radiusSlider2", edit=True, enable=True)
+        mc.intSliderGrp("radiusSlider3", edit=True, enable=False)
+        mc.intSliderGrp("radiusSlider4", edit=True, enable=False)
+        mc.intSliderGrp("radiusSlider5", edit=True, enable=False)
+    elif(numOfLevels == 3):
+        mc.intSliderGrp("radiusSlider2", edit=True, enable=True)
+        mc.intSliderGrp("radiusSlider3", edit=True, enable=True)
+        mc.intSliderGrp("radiusSlider4", edit=True, enable=False)
+        mc.intSliderGrp("radiusSlider5", edit=True, enable=False)
+    elif(numOfLevels == 4):
+        mc.intSliderGrp("radiusSlider2", edit=True, enable=True)
+        mc.intSliderGrp("radiusSlider3", edit=True, enable=True)
+        mc.intSliderGrp("radiusSlider4", edit=True, enable=True)
+        mc.intSliderGrp("radiusSlider5", edit=True, enable=False)
+    else:
+        mc.intSliderGrp("radiusSlider2", edit=True, enable=True)
+        mc.intSliderGrp("radiusSlider3", edit=True, enable=True)
+        mc.intSliderGrp("radiusSlider4", edit=True, enable=True)
+        mc.intSliderGrp("radiusSlider5", edit=True, enable=True)
+       
+def getTopperSizePref():
+    if(mc.radioButtonGrp("topperRadio", query=True, select=True) == 1):
+        return "match"
+    else:
+        return "custom"
+
+def toggleTopperRadiusSlider():
+    version = len(mc.ls('merry_go_round_ver_*')) + 1
+    if(getTopperSizePref() == "match"):
+        mc.floatSliderGrp("topperSlider", edit=True, enable=False)
+        adjustTopperSize()
+        createMerryGoRound()
+    elif(getTopperSizePref() == "custom"):
+        mc.floatSliderGrp("topperSlider", edit=True, enable=True)
+        adjustTopperSize()
+        createMerryGoRound()
+
+def getTopperRadius():
+    if(getTopperSizePref() == "match"):
+        return getLevel_1_radius()
+    else:
+        return mc.floatSliderGrp("topperSlider", query=True, value=True)
+
+def finalizeRide():
+    version = len(mc.ls('merry_go_round_ver_*')) + 1
+    radius1 = getLevel_1_radius()
+    mc.select(all=True)
+    
+    if(version > 1):
+        mc.select("merry_go_round_ver_*", "ground", d=True)
+    else:
+        mc.select("ground", d=True)
+    
+    mc.group(n="merry_go_round_ver_" + str(version), r=True)
+    layoutStreetLamps(version, radius1)
+    mc.delete(ch=True, e=False, c=False, all=True)
+      
+    mc.deleteUI("MyWindow")
+
+############################################################################################################################
+                                    #                          #
+                                    #   Animation Functions    #
+                                    #                          #
+                                    ############################
+                                    
+def setTimeLineOptions():
+    mc.playbackOptions( min='0sec', max='15sec', ast='0sec', aet='15sec', l='continuous', ps=1 )
+
+def setRotationExpression(level, version, multiplierList):
+    if(level == 1):
+        (key, value) = multiplierList[0]
+        mc.expression( s=getBaseRideGroup(1, version) + '|' + getSpinnerRideGroup(1, version) + '.ry = frame * ' + str(key),
+        n=getRotationExpName(1, version) )
+    elif(level == 2):
+        (key, value) = multiplierList[1]
+        mc.expression( s=getBaseRideGroup(2, version) + '|' + getSpinnerRideGroup(2, version) + '.ry = frame * ' + str(key),
+        n=getRotationExpName(2, version) )
+    elif(level == 3):
+        (key, value) = multiplierList[2]
+        mc.expression( s=getBaseRideGroup(3, version) + '|' + getSpinnerRideGroup(3, version) + '.ry = frame * ' + str(key),
+        n=getRotationExpName(3, version) )
+    elif(level == 4):
+        (key, value) = multiplierList[3]
+        mc.expression( s=getBaseRideGroup(4, version) + '|' + getSpinnerRideGroup(4, version) + '.ry = frame * ' + str(key),
+        n=getRotationExpName(4, version) )
+    else:
+        (key, value) = multiplierList[4]
+        mc.expression( s=getBaseRideGroup(5, version) + '|' + getSpinnerRideGroup(5, version) + '.ry = frame * ' + str(key),
+        n=getRotationExpName(5, version) )
+
+def getRideExpr(level, version, amp, period, rideNum):
+    base = getRideName(level, version, rideNum) + '|unicorn'
+        
+    riseExp = base + '.ty = '
+    riseEquation = ''
+    if(rideNum % 2 == 0):
+        riseEquation = str(amp) + ' * sin(deg_to_rad(' + getSpinnerRideGroup(level, version) + '.ry) * ' + str(period) +') + ' + str(amp)
+    else:
+        riseEquation = str(amp) + ' * cos(deg_to_rad(' + getSpinnerRideGroup(level, version) + '.ry) * ' + str(period) +') + ' + str(amp) 
+    
+    return riseExp + riseEquation 
+
+def setRideExpression(level, version, amp, period, number):
+    mc.expression(s=getRideExpr(level, version, amp, period, number), n=getAmpExpName(level, version))
+    
+#################################################################################################################
+#                                                                                                               #
+#                                    Program Execution                                                          #
+#                                                                                                               #
+#################################################################################################################
+createUI()
+
+
+    
+        
